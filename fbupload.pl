@@ -8,10 +8,10 @@ use constant API_SECRET => 'f71d99d43be0ffec625028e1bd1a35c2';
 use File::Basename;
 use WWW::Facebook::API;
 
-my ($PATH, $AID) = @ARGV;
+my @PATHS = @ARGV;
 
-die "echo path/to/file.jpg | $0 path [album-id]"
-    unless $PATH;
+die "$0 path [path2.. path3..]"
+    unless @PATHS;
 
 my $client = WWW::Facebook::API->new
 (
@@ -28,31 +28,38 @@ print "press return after visiting\n";
 <STDIN>;
 $client->auth->get_session($token);
 
-unless ($AID)
-{
-    use Data::Dumper;
-    $AID = ($client->photos->create_album(name => basename $PATH))->{aid}
-        or die 'could not create new album';
-}
-for my $file (<$PATH/*>)
-{
-    open my $fh, '<', $file;
-    unless ($fh)
-    {
-        warn "could not read $file";
-        next;
-    }
-    my ($name, $path, $suffix) = fileparse $file;
+my $AID = $ENV{AID};
 
-    my $data;
-    while ($fh->sysread(my $buffer, 256000)) { $data .= $buffer };
-    close $fh;
+for my $path (@PATHS)
+{
+    print "uploading files in $path\n";
+    unless ($AID)
+    {
+        use Data::Dumper;
+        $AID = ($client->photos->create_album(name => basename $path))->{aid}
+            or die 'could not create new album';
+    }
     
-    print "uploading $file\n";
-    $client->photos->upload
-    (
-        aid => $AID,
-        caption => $name,
-        data => $data,
-    );
+    for my $file (<$path/*>)
+    {
+        open my $fh, '<', $file;
+        unless ($fh)
+        {
+            warn "could not read $file";
+            next;
+        }
+        my ($name, $path, $suffix) = fileparse $file;
+    
+        my $data;
+        while ($fh->sysread(my $buffer, 256000)) { $data .= $buffer };
+        close $fh;
+        
+        print "   uploading $file\n";
+        $client->photos->upload
+        (
+            aid => $AID,
+            caption => $name,
+            data => $data,
+        );
+    }
 }
