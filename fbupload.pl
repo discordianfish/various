@@ -28,17 +28,12 @@ print "press return after visiting\n";
 <STDIN>;
 $client->auth->get_session($token);
 
-my $AID = $ENV{AID};
 
 for my $path (@PATHS)
 {
     print "uploading files in $path\n";
-    unless ($AID)
-    {
-        use Data::Dumper;
-        $AID = ($client->photos->create_album(name => basename $path))->{aid}
-            or die 'could not create new album';
-    }
+    my $AID = $ENV{AID} ? $ENV{AID} : ($client->photos->create_album(name => basename $path))->{aid}
+        or die 'could not create new album';
     
     for my $file (<$path/*>)
     {
